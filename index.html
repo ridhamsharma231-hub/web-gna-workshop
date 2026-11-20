@@ -1,0 +1,319 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculator</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #e8e8e8;
+    font-family: Arial, sans-serif;
+}
+
+.calculator {
+    width: 340px;
+    background: #000;
+    padding: 25px 18px;
+    border-radius: 35px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+}
+
+.display {
+    height: 150px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-end;
+    padding: 15px 8px;
+    color: white;
+    overflow: hidden;
+}
+
+#history {
+    color: #999;
+    font-size: 18px;
+    min-height: 25px;
+}
+
+#screen {
+    font-size: 55px;
+    font-weight: 300;
+    overflow-wrap: anywhere;
+}
+
+.buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+button {
+    width: 65px;
+    height: 65px;
+    border: none;
+    border-radius: 50%;
+    font-size: 25px;
+    cursor: pointer;
+    transition: filter 0.15s;
+}
+
+button:active {
+    filter: brightness(1.35);
+}
+
+.number {
+    background: #333333;
+    color: white;
+}
+
+.function {
+    background: #a5a5a5;
+    color: black;
+}
+
+.operator {
+    background: #ff9f0a;
+    color: white;
+}
+
+.operator.active {
+    background: white;
+    color: #ff9f0a;
+}
+
+.zero {
+    grid-column: span 2;
+    width: 140px;
+    border-radius: 40px;
+    text-align: left;
+    padding-left: 25px;
+}
+
+@media(max-width: 380px) {
+    .calculator {
+        width: 310px;
+    }
+
+    button {
+        width: 59px;
+        height: 59px;
+    }
+
+    .zero {
+        width: 128px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="calculator">
+
+    <div class="display">
+        <div id="history"></div>
+        <div id="screen">0</div>
+    </div>
+
+    <div class="buttons">
+
+        <button class="function" onclick="clearAll()">AC</button>
+        <button class="function" onclick="toggleSign()">+/-</button>
+        <button class="function" onclick="percentage()">%</button>
+        <button class="operator" data-op="/" onclick="chooseOperator('/')">÷</button>
+
+        <button class="number" onclick="inputNumber('7')">7</button>
+        <button class="number" onclick="inputNumber('8')">8</button>
+        <button class="number" onclick="inputNumber('9')">9</button>
+        <button class="operator" data-op="*" onclick="chooseOperator('*')">×</button>
+
+        <button class="number" onclick="inputNumber('4')">4</button>
+        <button class="number" onclick="inputNumber('5')">5</button>
+        <button class="number" onclick="inputNumber('6')">6</button>
+        <button class="operator" data-op="-" onclick="chooseOperator('-')">−</button>
+
+        <button class="number" onclick="inputNumber('1')">1</button>
+        <button class="number" onclick="inputNumber('2')">2</button>
+        <button class="number" onclick="inputNumber('3')">3</button>
+        <button class="operator" data-op="+" onclick="chooseOperator('+')">+</button>
+
+        <button class="number zero" onclick="inputNumber('0')">0</button>
+        <button class="number" onclick="inputDecimal()">.</button>
+        <button class="operator" onclick="calculate()">=</button>
+
+    </div>
+</div>
+
+<script>
+
+let current = "0";
+let previous = null;
+let operator = null;
+let waitingForNumber = false;
+let justCalculated = false;
+
+const screen = document.getElementById("screen");
+const history = document.getElementById("history");
+
+function updateDisplay() {
+    screen.innerText = Number(current).toLocaleString("en-US", {
+        maximumFractionDigits: 10
+    });
+}
+
+function updateButtons() {
+    document.querySelectorAll(".operator").forEach(button => {
+        button.classList.toggle(
+            "active",
+            button.dataset.op === operator && !waitingForNumber
+        );
+    });
+}
+
+function inputNumber(num) {
+
+    if (current === "Error") clearAll();
+
+    if (waitingForNumber || justCalculated) {
+        current = num;
+        waitingForNumber = false;
+        justCalculated = false;
+    } else {
+        if (current.replace("-", "").replace(".", "").length >= 12) return;
+        current = current === "0" ? num : current + num;
+    }
+
+    updateDisplay();
+    updateButtons();
+}
+
+function inputDecimal() {
+
+    if (waitingForNumber || justCalculated) {
+        current = "0.";
+        waitingForNumber = false;
+        justCalculated = false;
+    } else if (!current.includes(".")) {
+        current += ".";
+    }
+
+    updateDisplay();
+}
+
+function chooseOperator(op) {
+
+    if (current === "Error") return;
+
+    if (operator && !waitingForNumber) {
+        calculate();
+    }
+
+    previous = Number(current);
+    operator = op;
+    waitingForNumber = true;
+    justCalculated = false;
+
+    history.innerText = current + " " + op;
+    updateButtons();
+}
+
+function calculate() {
+
+    if (operator === null || waitingForNumber) return;
+
+    let a = previous;
+    let b = Number(current);
+    let result;
+
+    switch (operator) {
+        case "+":
+            result = a + b;
+            break;
+
+        case "-":
+            result = a - b;
+            break;
+
+        case "*":
+            result = a * b;
+            break;
+
+        case "/":
+            result = b === 0 ? NaN : a / b;
+            break;
+    }
+
+    history.innerText = a + " " + operator + " " + b + " =";
+
+    current = Number.isFinite(result)
+        ? String(Number(result.toPrecision(12)))
+        : "Error";
+
+    operator = null;
+    previous = null;
+    waitingForNumber = true;
+    justCalculated = true;
+
+    updateDisplay();
+    updateButtons();
+}
+
+function clearAll() {
+
+    current = "0";
+    previous = null;
+    operator = null;
+    waitingForNumber = false;
+    justCalculated = false;
+
+    history.innerText = "";
+    updateDisplay();
+    updateButtons();
+}
+
+function toggleSign() {
+
+    if (current === "0" || current === "Error") return;
+
+    current = String(-Number(current));
+    updateDisplay();
+}
+
+function percentage() {
+
+    if (current === "Error") return;
+
+    current = String(Number(current) / 100);
+    updateDisplay();
+}
+
+// Keyboard support
+
+document.addEventListener("keydown", e => {
+
+    if (/^[0-9]$/.test(e.key)) inputNumber(e.key);
+    else if (e.key === ".") inputDecimal();
+    else if (["+", "-", "*", "/"].includes(e.key)) chooseOperator(e.key);
+    else if (e.key === "Enter" || e.key === "=") calculate();
+    else if (e.key === "Escape") clearAll();
+    else if (e.key === "%") percentage();
+});
+
+updateDisplay();
+
+</script>
+
+</body>
+</html>
